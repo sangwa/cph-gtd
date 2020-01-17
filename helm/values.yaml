@@ -1,0 +1,9 @@
+app:
+  image: localhost:5000/cph-gtd:latest
+  imagePullPolicy: Always
+  nodePort: 31500
+
+db:
+  image: postgres:12-alpine
+  name: gtd
+  user: gtd

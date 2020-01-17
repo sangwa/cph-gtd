@@ -1,0 +1,77 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ template "gtd.fullname" . }}-app
+  namespace: {{ .Release.Namespace }}
+  labels: &labels
+    {{- include "gtd.labels" . | nindent 4 }}
+    tier: app
+spec:
+  replicas: 2
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 1
+  selector:
+    matchLabels: *labels
+  template:
+    metadata:
+      labels: *labels
+    spec:
+      initContainers:
+      - name: db
+        image: "{{ .Values.app.image }}"
+        imagePullPolicy: {{ default "IfNotPresent" .Values.app.imagePullPolicy }}
+        args:
+        - ./manage.py
+        - migrate
+        env: &env
+        - name: PG_NAME
+          valueFrom:
+            configMapKeyRef:
+              name: &configmap {{ template "gtd.configmap.fullname" . }}
+              key: PG_NAME
+        - name: PG_USER
+          valueFrom:
+            configMapKeyRef:
+              name: *configmap
+              key: PG_USER
+        - name: PG_PASS
+          valueFrom:
+            secretKeyRef:
+              name: &secret {{ template "gtd.secret.fullname" . }}
+              key: PG_PASS
+        - name: PG_HOST
+          value: {{ template "gtd.fullname" . }}-db
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: *secret
+              key: SECRET_KEY
+      containers:
+      - name: app
+        image: "{{ .Values.app.image }}"
+        imagePullPolicy: {{ default "IfNotPresent" .Values.app.imagePullPolicy }}
+        args:
+        - ./manage.py
+        - runserver
+        - 0.0.0.0:5000
+        resources:
+          requests:
+            cpu: 250m
+            memory: 256Mi
+          limits:
+            cpu: 1000m
+            memory: 512Mi
+        ports:
+        - name: http
+          containerPort: &port 5000
+        livenessProbe: &probe
+          httpGet:
+            path: /
+            port: *port
+          initialDelaySeconds: 3
+          periodSeconds: 5
+        readinessProbe: *probe
+        env: *env

@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "gtd.fullname" . }}-db
+  namespace: {{ .Release.Namespace }}
+  labels: &labels
+    {{- include "gtd.labels" . | nindent 4 }}
+    tier: db
+spec:
+  selector: *labels
+  type: ClusterIP
+  ports:
+  - name: tcp-postgresql
+    port: 5432
+    protocol: TCP

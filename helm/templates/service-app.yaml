@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ template "gtd.fullname" . }}-app
+  namespace: {{ .Release.Namespace }}
+  labels: &labels
+    {{- include "gtd.labels" . | nindent 4 }}
+    tier: app
+spec:
+  selector: *labels
+  type: NodePort
+  ports:
+  - name: http
+    port: 5000
+    protocol: TCP
+    nodePort: {{ default 15000 .Values.app.nodePort }}
